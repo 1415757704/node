@@ -1,0 +1,99 @@
+10、GET、POST、链式操作
+
+  //GET请求
+	const express = require('express');
+	const querystring = require('querystring');
+	const server = express();
+	server.use('/',function(req,res){
+		var GET = req.query;
+		var JSON = querystring(GET);
+	});
+	server.listen(8090);
+	
+	//POST请求
+	const express = require('express');
+	const querystring = require('querystring');
+	const badyParse = require('body-parse');
+	const server = express();
+	server.use(badyParse.urlencoding({
+		extended:true,
+		limit: 2*1024*1024
+	}));
+	server.use('/',function(req,res){
+		var POST = req.body;
+		var JSON = querystring(POST);
+	});
+	server.listen(8090);
+	
+	/**链式操作:与下面的是一起的
+	const express = require('express');
+	const cusLink = require('./lib/cus-link');
+	const querystring = require('querystring');
+	
+	const server = express();
+	server.use(cusLink.urlencoding());//使用下面的自定义的链式操作
+	server.use('/',function(){
+		var JSON = req.body;
+	});
+	server.listen(8090);
+	
+	
+	//cus-link.js
+	//自定义链式操作
+	const badyParse = require('body-parse');
+	module.exports = {
+		 urlencoding : function(){
+		 		return function(req,res,next){
+				//这里拦截所有的请求，可以在req中携带处理过的数据，然后再下面的use中使用，这也是自定义的链式操作的原理
+				var str = '';
+				req.on('data',function(data){
+					str+=data;
+				});
+				req.on('end',function(){
+					var POST = querystring.parse(str);
+					req.body = POST;
+					next();
+				});
+				};
+		 }
+	};
+	**/
+	
+11、cookies、session
+	1、http是无状态的协议，需要cookies保存信息，但是cookies不安全，因此有了session，但是session是基于cookies实现了，cookies中保存了一个
+	session_id，便于找回对应的session.但是仍然有session劫持.
+	2、cookies：add、get、del操作、cookies能向上传递，在上层获取/setcookies/set中保存cookies，在/setcookies中能获取
+		const express = require('express');
+		const expressStatic = require('express-static');
+		const querystring = require('querystring');
+		const http = require('http');
+		var cookieParser = require('cookie-parser');
+		var server = express();
+		server.listen(8090);
+		
+		//cookie:get
+		server.use(cookieParser());//使用中间件，之后就有cookies这个属性
+		//server.use(cookieParser(('csavasvava'));//在这里需要加上secret，这样才能保证req.cookies拿到的cookies是没有加上签名的
+		var COOKIES = req.cookies;
+		var SIGNEDCOOKIES = req.signedCookies;//签名的cookies
+		
+		//set
+		//path是指访问路径为/的时候才会创建这个cookie
+		//如果有使用签名的话，在这里需要加上secret，
+		//res.secret='csavasvava';//用于签名，在cookies的内容被篡改的时候就能识别出来
+		res.cookie('addr',addr,{maxAge:1000*60*60*24*30,httpOnly: true,path:'/',signed:true});
+		
+		//del
+		res.clearCookie('addr');
+		
+	3、session操作
+		const cookieParse = require('cookie-parse');
+		const cookieSession = require('cookie-session');
+		//先解析cookie
+		server.use(cookieParse());
+		server.use(cookieSession({
+			name:'sess',
+			keys:[231,41,412,125,1242141,412,312,4,1234,12],//keys用于session加密，越长越好
+			maxAge:2*3600*1000
+		}));
+	
